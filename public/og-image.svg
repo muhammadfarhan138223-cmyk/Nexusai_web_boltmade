@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f1115"/>
+      <stop offset="1" stop-color="#083344"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#06b6d4"/>
+      <stop offset="0.5" stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#accent)" opacity="0.12"/>
+  <g transform="translate(96,200)">
+    <rect width="88" height="88" rx="22" fill="url(#accent)"/>
+    <path d="M26 62V26l18 22 18-22v36" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <circle cx="44" cy="44" r="3.5" fill="#fff"/>
+  </g>
+  <text x="96" y="370" font-family="Sora, Inter, sans-serif" font-size="84" font-weight="800" fill="#f8fafc">Nexus AI</text>
+  <text x="100" y="430" font-family="Inter, sans-serif" font-size="32" font-weight="500" fill="#94a3b8">Your intelligent assistant for work &amp; life</text>
+  <rect x="100" y="470" width="220" height="56" rx="28" fill="url(#accent)"/>
+  <text x="210" y="505" text-anchor="middle" font-family="Inter, sans-serif" font-size="22" font-weight="600" fill="#0f1115">Start chatting free</text>
+</svg>

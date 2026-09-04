@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#06b6d4" />
+
+    <!-- Primary Meta Tags -->
+    <title data-default>Nexus AI — Your Intelligent Assistant for Work & Life</title>
+    <meta name="title" content="Nexus AI — Your Intelligent Assistant for Work & Life" />
+    <meta
+      name="description"
+      content="Nexus AI is a premium AI assistant platform for personal and business productivity. Chat with top AI models, summarize documents, organize conversations, and automate your workflow."
+    />
+    <meta name="keywords" content="AI assistant, AI chat, ChatGPT alternative, AI for business, document summarizer, AI agents, productivity AI, Nexus AI" />
+    <meta name="author" content="Nexus AI" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://nexusai.app/" />
+    <meta property="og:title" content="Nexus AI — Your Intelligent Assistant for Work & Life" />
+    <meta
+      property="og:description"
+      content="A premium AI assistant platform with streaming chat, multi-model support, document tools, and a growing ecosystem of AI agents."
+    />
+    <meta property="og:site_name" content="Nexus AI" />
+    <meta property="og:image" content="/og-image.svg" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://nexusai.app/" />
+    <meta name="twitter:title" content="Nexus AI — Your Intelligent Assistant for Work & Life" />
+    <meta
+      name="twitter:description"
+      content="A premium AI assistant platform with streaming chat, multi-model support, document tools, and a growing ecosystem of AI agents."
+    />
+    <meta name="twitter:image" content="/og-image.svg" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Prevent theme flash: apply persisted theme before paint -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('nexus-theme');
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = stored || (prefersDark ? 'dark' : 'light');
+          if (theme === 'dark') document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
