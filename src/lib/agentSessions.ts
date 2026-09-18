@@ -1,40 +1,64 @@
-import { supabase } from './supabase';
+// src/lib/agentSessions.ts
 import type { AgentSession, AgentSessionInsert, AgentSessionUpdate } from './database.types';
 import { createChat, addMessage, fetchMessages } from './chats';
 import type { Chat, Message, MessageInsert, Provider } from './database.types';
 
+const KEY = 'nexus-local-agent-sessions';
+
+function now() {
+  return new Date().toISOString();
+}
+
+function id() {
+  return crypto.randomUUID();
+}
+
+function read(): AgentSession[] {
+  try {
+    return JSON.parse(localStorage.getItem(KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function write(sessions: AgentSession[]) {
+  localStorage.setItem(KEY, JSON.stringify(sessions));
+}
+
 export async function fetchAgentSessions(): Promise<AgentSession[]> {
-  const { data, error } = await supabase
-    .from('agent_sessions')
-    .select('*')
-    .order('updated_at', { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as unknown as AgentSession[];
+  return read().sort((a, b) => b.updated_at.localeCompare(a.updated_at));
 }
 
 export async function createAgentSession(
   row: AgentSessionInsert & { provider?: Provider },
 ): Promise<AgentSession> {
-  const { data, error } = await supabase
-    .from('agent_sessions')
-    .insert(row)
-    .select()
-    .single();
-  if (error) throw error;
-  return data as unknown as AgentSession;
+  const timestamp = now();
+  const session: AgentSession = {
+    id: row.id ?? id(),
+    user_id: 'local-nexus-user',
+    agent_type: row.agent_type,
+    title: row.title ?? 'Agent session',
+    status: row.status ?? 'planning',
+    plan: row.plan ?? null,
+    current_step: row.current_step ?? 0,
+    model: row.model ?? 'groq/llama-3.3-70b-versatile',
+    provider: row.provider ?? 'groq',
+    chat_id: row.chat_id ?? null,
+    created_at: timestamp,
+    updated_at: timestamp,
+  };
+  write([session, ...read()]);
+  return session;
 }
 
-export async function updateAgentSession(
-  id: string,
-  updates: AgentSessionUpdate,
-): Promise<void> {
-  const { error } = await supabase.from('agent_sessions').update(updates).eq('id', id);
-  if (error) throw error;
+export async function updateAgentSession(id: string, updates: AgentSessionUpdate): Promise<void> {
+  write(
+    read().map((s) => (s.id === id ? { ...s, ...updates, updated_at: now() } : s)),
+  );
 }
 
 export async function deleteAgentSession(id: string): Promise<void> {
-  const { error } = await supabase.from('agent_sessions').delete().eq('id', id);
-  if (error) throw error;
+  write(read().filter((s) => s.id !== id));
 }
 
 /**
@@ -79,4 +103,4 @@ export async function addAgentMessage(
 
 export async function getAgentMessages(chatId: string): Promise<Message[]> {
   return fetchMessages(chatId);
-}
+    }
