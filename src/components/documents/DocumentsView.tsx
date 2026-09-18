@@ -1,3 +1,4 @@
+// src/components/documents/DocumentsView.tsx
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
@@ -18,7 +19,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Seo } from '@/components/ui/Seo';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { supabase } from '@/lib/supabase';
+import { fetchDocuments, createDocument, updateDocument, deleteDocument } from '@/lib/documents';
 import { extractPdfText, chunkText } from '@/lib/pdf';
 import { completeOnce } from '@/lib/ai';
 import { getModel } from '@/lib/models';
@@ -43,12 +44,12 @@ export function DocumentsView({ onBack }: DocumentsViewProps) {
 
   const reload = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('documents')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (error) toast.error('Could not load documents.');
-    setDocs((data ?? []) as DocumentRow[]);
+    try {
+      const data = await fetchDocuments();
+      setDocs(data);
+    } catch {
+      toast.error('Could not load documents.');
+    }
     setLoading(false);
   }, [toast]);
 
@@ -74,28 +75,7 @@ export function DocumentsView({ onBack }: DocumentsViewProps) {
         return;
       }
 
-      const userId = user.id;
-      const safeName = `${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
-      const path = `${userId}/${safeName}`;
-      const { error: upErr } = await supabase.storage.from('documents').upload(path, file, {
-        contentType: 'application/pdf',
-        upsert: false,
-      });
-      if (upErr) throw upErr;
-
-      const { data, error: insErr } = await supabase
-        .from('documents')
-        .insert({
-          filename: file.name,
-          storage_path: path,
-          char_count: charCount,
-          status: 'ready',
-        })
-        .select()
-        .single();
-      if (insErr) throw insErr;
-
-      const newDoc = data as DocumentRow;
+      const newDoc = await createDocument({ filename: file.name, charCount });
       sessionStorage.setItem(`doc-text:${newDoc.id}`, text);
       setDocs((prev) => [newDoc, ...prev]);
       toast.success('Document uploaded', `${pageCount} page${pageCount === 1 ? '' : 's'}, ${charCount.toLocaleString()} characters.`);
@@ -138,11 +118,7 @@ ${body}
 
       const { summary, keyPoints } = parseSummary(result);
 
-      const { error } = await supabase
-        .from('documents')
-        .update({ summary: result, key_points: keyPoints, status: 'ready' })
-        .eq('id', doc.id);
-      if (error) throw error;
+      await updateDocument(doc.id, { summary: result, key_points: keyPoints, status: 'ready' });
 
       setDocs((prev) => prev.map((d) => (d.id === doc.id ? { ...d, summary: result, key_points: keyPoints } : d)));
       setViewer({ ...doc, summary: result, key_points: keyPoints });
@@ -158,8 +134,7 @@ ${body}
   async function onDelete() {
     if (!confirmDelete) return;
     try {
-      await supabase.storage.from('documents').remove([confirmDelete.storage_path]);
-      await supabase.from('documents').delete().eq('id', confirmDelete.id);
+      await deleteDocument(confirmDelete.id);
       sessionStorage.removeItem(`doc-text:${confirmDelete.id}`);
       setDocs((prev) => prev.filter((d) => d.id !== confirmDelete.id));
       toast.success('Document deleted.');
