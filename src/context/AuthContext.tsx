@@ -1,10 +1,29 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import type { Session, User } from '@supabase/supabase-js';
+// src/context/AuthContext.tsx
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { Profile, UserPreferences } from '@/lib/database.types';
+import {
+  getCurrentUser,
+  localSignIn,
+  localSignOut,
+  localSignUp,
+  updateLocalUser,
+  type LocalUser,
+} from '@/lib/localAuth';
+
+// Minimal local stand-ins for the Supabase Session/User shapes — only the
+// fields the app actually reads (id, email) are included.
+export interface LocalSessionUser {
+  id: string;
+  email: string;
+}
+
+export interface LocalSession {
+  user: LocalSessionUser;
+}
 
 interface AuthContextValue {
-  session: Session | null;
-  user: User | null;
+  session: LocalSession | null;
+  user: LocalSessionUser | null;
   profile: Profile | null;
   preferences: UserPreferences | null;
   loading: boolean;
@@ -17,91 +36,155 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const USER_ID = 'local-nexus-user';
+function profileKey(userId: string) {
+  return `nexus-profile-${userId}`;
+}
 
-const GUEST_USER = {
-  id: USER_ID,
-  email: 'user@nexus.local',
-  user_metadata: { full_name: 'Nexus User' },
-} as unknown as User;
+function prefsKey(userId: string) {
+  return `nexus-prefs-${userId}`;
+}
 
-const GUEST_SESSION = {
-  user: GUEST_USER,
-} as unknown as Session;
+function defaultPreferences(userId: string): UserPreferences {
+  return {
+    user_id: userId,
+    default_provider: 'groq',
+    default_model: 'groq/llama-3.3-70b-versatile',
+    system_prompt: '',
+    temperature: 0.7,
+    theme: 'system',
+    updated_at: new Date().toISOString(),
+  };
+}
 
-const DEFAULT_PREFERENCES: UserPreferences = {
-  user_id: USER_ID,
-  default_provider: 'groq',
-  default_model: 'groq/llama-3.3-70b-versatile',
-  system_prompt: '',
-  temperature: 0.7,
-  theme: 'system',
-  updated_at: new Date().toISOString(),
-};
+function loadProfile(user: LocalUser): Profile {
+  try {
+    const raw = localStorage.getItem(profileKey(user.id));
+    if (raw) return JSON.parse(raw);
+  } catch {
+    // fall through to default
+  }
+  return {
+    id: user.id,
+    full_name: user.fullName,
+    avatar_url: null,
+    bio: null,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+function loadPreferences(userId: string): UserPreferences {
+  try {
+    const raw = localStorage.getItem(prefsKey(userId));
+    if (raw) return JSON.parse(raw);
+  } catch {
+    // fall through to default
+  }
+  return defaultPreferences(userId);
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [preferences, setPreferences] =
-    useState<UserPreferences>(DEFAULT_PREFERENCES);
+  const [localUser, setLocalUser] = useState<LocalUser | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const refreshProfile = useCallback(async () => {}, []);
-
-  const refreshPreferences = useCallback(async () => {
-    setPreferences((prev) => ({
-      ...prev,
-      updated_at: new Date().toISOString(),
-    }));
+  useEffect(() => {
+    const existing = getCurrentUser();
+    if (existing) {
+      setLocalUser(existing);
+      setProfile(loadProfile(existing));
+      setPreferences(loadPreferences(existing.id));
+    }
+    setLoading(false);
   }, []);
 
-  const signUp = useCallback(
-    async () => ({
-      error: 'Account creation is disabled in local mode.',
-    }),
-    [],
-  );
+  const refreshProfile = useCallback(async () => {
+    setLocalUser((current) => {
+      if (current) setProfile(loadProfile(current));
+      return current;
+    });
+  }, []);
 
-  const signIn = useCallback(
-    async () => ({
-      error: null,
-    }),
-    [],
-  );
+  const refreshPreferences = useCallback(async () => {
+    setLocalUser((current) => {
+      if (current) setPreferences(loadPreferences(current.id));
+      return current;
+    });
+  }, []);
 
-  const signOut = useCallback(async () => {}, []);
+  const signUp = useCallback(async (email: string, password: string, fullName = '') => {
+    const { user, error } = await localSignUp(email, password, fullName);
+    if (error || !user) return { error };
+
+    setLocalUser(user);
+    setProfile(loadProfile(user));
+    setPreferences(loadPreferences(user.id));
+    return { error: null };
+  }, []);
+
+  const signIn = useCallback(async (email: string, password: string) => {
+    const { user, error } = await localSignIn(email, password);
+    if (error || !user) return { error };
+
+    setLocalUser(user);
+    setProfile(loadProfile(user));
+    setPreferences(loadPreferences(user.id));
+    return { error: null };
+  }, []);
+
+  const signOut = useCallback(async () => {
+    localSignOut();
+    setLocalUser(null);
+    setProfile(null);
+    setPreferences(null);
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      session: GUEST_SESSION,
-      user: GUEST_USER,
-      profile: {
-        id: USER_ID,
-        full_name: 'Nexus User',
-        avatar_url: null,
-        bio: null,
-        updated_at: new Date().toISOString(),
-      },
+      session: localUser ? { user: { id: localUser.id, email: localUser.email } } : null,
+      user: localUser ? { id: localUser.id, email: localUser.email } : null,
+      profile,
       preferences,
-      loading: false,
+      loading,
       signUp,
       signIn,
       signOut,
       refreshProfile,
       refreshPreferences,
     }),
-    [
-      preferences,
-      signUp,
-      signIn,
-      signOut,
-      refreshProfile,
-      refreshPreferences,
-    ],
+    [localUser, profile, preferences, loading, signUp, signIn, signOut, refreshProfile, refreshPreferences],
   );
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+/** Save profile fields for the given user directly to localStorage. */
+export function saveLocalProfile(
+  userId: string,
+  updates: { full_name?: string; bio?: string; avatar_url?: string | null },
+): Profile {
+  const current = (() => {
+    try {
+      const raw = localStorage.getItem(profileKey(userId));
+      if (raw) return JSON.parse(raw) as Profile;
+    } catch {
+      // ignore
+    }
+    return { id: userId, full_name: null, avatar_url: null, bio: null, updated_at: new Date().toISOString() };
+  })();
+
+  const next: Profile = { ...current, ...updates, updated_at: new Date().toISOString() };
+  localStorage.setItem(profileKey(userId), JSON.stringify(next));
+  if (typeof updates.full_name === 'string') updateLocalUser(userId, { fullName: updates.full_name });
+  return next;
+}
+
+/** Save AI preferences for the given user directly to localStorage. */
+export function saveLocalPreferences(userId: string, updates: Partial<UserPreferences>): UserPreferences {
+  const current = loadPreferences(userId);
+  const next: UserPreferences = { ...current, ...updates, user_id: userId, updated_at: new Date().toISOString() };
+  localStorage.setItem(prefsKey(userId), JSON.stringify(next));
+  return next;
 }
 
 export function useAuth(): AuthContextValue {
