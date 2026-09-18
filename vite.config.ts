@@ -23,7 +23,6 @@ export default defineConfig({
           pdfjs: ['pdfjs-dist'],
           react: ['react', 'react-dom'],
           markdown: ['react-markdown', 'remark-gfm'],
-          supabase: ['@supabase/supabase-js'],
         },
       },
     },
