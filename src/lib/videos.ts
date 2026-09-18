@@ -1,97 +1,77 @@
-import { supabase } from './supabase';
+// src/lib/videos.ts
 import type { VideoRow, VideoInsert, VideoUpdate } from './database.types';
 
+// Video generation used a Supabase Edge Function to proxy Replicate — that
+// backend no longer exists. Records are still kept locally so the UI doesn't
+// break, but starting a new generation will surface a clear error instead of
+// silently failing.
+
+const KEY = 'nexus-local-videos';
+
+function read(): VideoRow[] {
+  try {
+    return JSON.parse(localStorage.getItem(KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function write(rows: VideoRow[]) {
+  localStorage.setItem(KEY, JSON.stringify(rows));
+}
+
 export async function fetchVideos(): Promise<VideoRow[]> {
-  const { data, error } = await supabase
-    .from('videos')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as VideoRow[];
+  return read().sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
 export async function createVideoRecord(row: VideoInsert): Promise<VideoRow> {
-  const { data, error } = await supabase
-    .from('videos')
-    .insert(row)
-    .select()
-    .single();
-  if (error) throw error;
-  return data as VideoRow;
+  const now = new Date().toISOString();
+  const record: VideoRow = {
+    id: row.id ?? crypto.randomUUID(),
+    user_id: 'local-nexus-user',
+    input_image_path: row.input_image_path ?? null,
+    input_image_url: row.input_image_url ?? null,
+    prompt: row.prompt ?? null,
+    status: row.status ?? 'queued',
+    prediction_id: row.prediction_id ?? null,
+    video_url: row.video_url ?? null,
+    error: row.error ?? null,
+    model: row.model ?? 'stability-ai/stable-video-diffusion',
+    created_at: now,
+  };
+  write([record, ...read()]);
+  return record;
 }
 
 export async function updateVideoRecord(id: string, updates: VideoUpdate): Promise<void> {
-  const { error } = await supabase.from('videos').update(updates).eq('id', id);
-  if (error) throw error;
+  write(read().map((v) => (v.id === id ? { ...v, ...updates } : v)));
 }
 
 export async function deleteVideoRecord(id: string): Promise<void> {
-  const { error } = await supabase.from('videos').delete().eq('id', id);
-  if (error) throw error;
+  write(read().filter((v) => v.id !== id));
 }
 
-export async function uploadVideoInputImage(file: File, userId: string): Promise<{ path: string; url: string }> {
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'png';
-  const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-
-  const { error: upErr } = await supabase.storage
-    .from('video-inputs')
-    .upload(path, file, { cacheControl: '3600', upsert: false });
-  if (upErr) throw upErr;
-
-  const { data } = supabase.storage.from('video-inputs').createSignedUrl(path, 3600);
-  if (!data?.signedUrl) throw new Error('Could not create signed URL for image.');
-  return { path, url: data.signedUrl };
-}
-
-const FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/replicate-video`;
-
-async function callVideoFunction(body: unknown): Promise<Record<string, unknown>> {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const accessToken = sessionData?.session?.access_token;
-
-  const res = await fetch(FUNCTION_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken ?? import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-    },
-    body: JSON.stringify(body),
+export async function uploadVideoInputImage(file: File, _userId?: string): Promise<{ path: string; url: string }> {
+  const url = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error(`Could not read ${file.name}`));
+    reader.readAsDataURL(file);
   });
-
-  if (!res.ok) {
-    let detail = `Request failed (${res.status})`;
-    try {
-      const errJson = await res.json();
-      if (errJson?.error) detail = errJson.error;
-    } catch {
-      // ignore
-    }
-    throw new Error(detail);
-  }
-
-  return await res.json();
+  return { path: file.name, url };
 }
 
 export async function startVideoPrediction(
-  imageUrl: string,
-  model: string,
+  _imageUrl?: string,
+  _model?: string,
 ): Promise<{ predictionId: string; status: string }> {
-  const result = await callVideoFunction({ action: 'create', imageUrl, model });
-  const predictionId = (result as { predictionId?: string }).predictionId;
-  const status = (result as { status?: string }).status;
-  if (!predictionId) throw new Error('No prediction ID returned from server.');
-  return { predictionId, status: status ?? 'starting' };
+  throw new Error(
+    'Video generation needs a backend (Replicate) that is not configured. This feature is not available in local mode.',
+  );
 }
 
 export async function pollVideoPrediction(
-  predictionId: string,
+  _predictionId?: string,
 ): Promise<{ status: string; videoUrl: string | null; error: string | null }> {
-  const result = await callVideoFunction({ action: 'poll', predictionId });
-  return {
-    status: (result as { status?: string }).status ?? 'unknown',
-    videoUrl: (result as { videoUrl?: string | null }).videoUrl ?? null,
-    error: (result as { error?: string | null }).error ?? null,
-  };
+  throw new Error('Video generation is not available in local mode.');
 }
