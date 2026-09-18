@@ -40,16 +40,6 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session] = useState<Session | null>(GUEST_SESSION);
-  const [user] = useState<User | null>(GUEST_USER);
-  const [profile] = useState<Profile | null>({
-    id: USER_ID,
-    full_name: 'Nexus User',
-    avatar_url: null,
-    bio: null,
-    updated_at: new Date().toISOString(),
-  });
-
   const [preferences, setPreferences] =
     useState<UserPreferences>(DEFAULT_PREFERENCES);
 
@@ -76,15 +66,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  const signOut = useCallback(async () => {
-    // Local mode intentionally keeps the app available without authentication.
-  }, []);
+  const signOut = useCallback(async () => {}, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      session,
-      user,
-      profile,
+      session: GUEST_SESSION,
+      user: GUEST_USER,
+      profile: {
+        id: USER_ID,
+        full_name: 'Nexus User',
+        avatar_url: null,
+        bio: null,
+        updated_at: new Date().toISOString(),
+      },
       preferences,
       loading: false,
       signUp,
@@ -94,9 +88,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       refreshPreferences,
     }),
     [
-      session,
-      user,
-      profile,
       preferences,
       signUp,
       signIn,
