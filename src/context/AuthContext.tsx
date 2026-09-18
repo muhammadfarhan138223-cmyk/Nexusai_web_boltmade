@@ -1,6 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
 import type { Profile, UserPreferences } from '@/lib/database.types';
 
 interface AuthContextValue {
@@ -18,8 +17,20 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+const USER_ID = 'local-nexus-user';
+
+const GUEST_USER = {
+  id: USER_ID,
+  email: 'user@nexus.local',
+  user_metadata: { full_name: 'Nexus User' },
+} as unknown as User;
+
+const GUEST_SESSION = {
+  user: GUEST_USER,
+} as unknown as Session;
+
 const DEFAULT_PREFERENCES: UserPreferences = {
-  user_id: '',
+  user_id: USER_ID,
   default_provider: 'groq',
   default_model: 'groq/llama-3.3-70b-versatile',
   system_prompt: '',
@@ -29,109 +40,44 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [session] = useState<Session | null>(GUEST_SESSION);
+  const [user] = useState<User | null>(GUEST_USER);
+  const [profile] = useState<Profile | null>({
+    id: USER_ID,
+    full_name: 'Nexus User',
+    avatar_url: null,
+    bio: null,
+    updated_at: new Date().toISOString(),
+  });
 
-  const refreshProfile = useCallback(async () => {
-    if (!user?.id) {
-      setProfile(null);
-      return;
-    }
-    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
-    setProfile((data as Profile | null) ?? null);
-  }, [user?.id]);
+  const [preferences, setPreferences] =
+    useState<UserPreferences>(DEFAULT_PREFERENCES);
+
+  const refreshProfile = useCallback(async () => {}, []);
 
   const refreshPreferences = useCallback(async () => {
-    if (!user?.id) {
-      setPreferences(null);
-      return;
-    }
-    const { data } = await supabase
-      .from('user_preferences')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    setPreferences((data as UserPreferences | null) ?? { ...DEFAULT_PREFERENCES, user_id: user.id });
-  }, [user?.id]);
-
-  // Bootstrap session + subscribe to auth changes.
-  useEffect(() => {
-    let mounted = true;
-
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!mounted) return;
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      setLoading(false);
-    })();
-
-    // onAuthStateChange callback runs synchronously; do async work in an IIFE
-    // to avoid the deadlock documented in the bolt-database skill.
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      (async () => {
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-        if (!newSession) {
-          setProfile(null);
-          setPreferences(null);
-        }
-      })();
-    });
-
-    return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
-    };
+    setPreferences((prev) => ({
+      ...prev,
+      updated_at: new Date().toISOString(),
+    }));
   }, []);
 
-  // Load profile + preferences whenever the user changes.
-  useEffect(() => {
-    if (!user) {
-      setProfile(null);
-      setPreferences(null);
-      return;
-    }
-    (async () => {
-      await Promise.all([refreshProfile(), refreshPreferences()]);
-    })();
-  }, [user, refreshProfile, refreshPreferences]);
-
   const signUp = useCallback(
-    async (email: string, password: string, fullName?: string) => {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: fullName ?? '' } },
-      });
-      if (error) return { error: friendlyAuthError(error) };
-      // signUp may return a session immediately (email confirmation off).
-      if (data.session) {
-        setSession(data.session);
-        setUser(data.user);
-      }
-      return { error: null };
-    },
+    async () => ({
+      error: 'Account creation is disabled in local mode.',
+    }),
     [],
   );
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: friendlyAuthError(error) };
-    setSession(data.session);
-    setUser(data.user);
-    return { error: null };
-  }, []);
+  const signIn = useCallback(
+    async () => ({
+      error: null,
+    }),
+    [],
+  );
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    setSession(null);
-    setUser(null);
-    setProfile(null);
-    setPreferences(null);
+    // Local mode intentionally keeps the app available without authentication.
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -140,31 +86,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       profile,
       preferences,
-      loading,
+      loading: false,
       signUp,
       signIn,
       signOut,
       refreshProfile,
       refreshPreferences,
     }),
-    [session, user, profile, preferences, loading, signUp, signIn, signOut, refreshProfile, refreshPreferences],
+    [
+      session,
+      user,
+      profile,
+      preferences,
+      signUp,
+      signIn,
+      signOut,
+      refreshProfile,
+      refreshPreferences,
+    ],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-function friendlyAuthError(err: { message?: string; status?: number }): string {
-  const msg = err.message ?? '';
-  if (msg.includes('Invalid login credentials')) return 'Incorrect email or password.';
-  if (msg.includes('User already registered')) return 'An account with this email already exists.';
-  if (msg.includes('Password should be at least')) return 'Password must be at least 6 characters.';
-  if (msg.includes('rate limit') || msg.includes('too many')) return 'Too many attempts. Please wait a moment and try again.';
-  if (msg.includes('Email')) return 'Please enter a valid email address.';
-  return msg || 'Something went wrong. Please try again.';
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+
+  if (!ctx) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+
   return ctx;
 }
