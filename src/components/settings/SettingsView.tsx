@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+// src/components/settings/SettingsView.tsx
+import { useState } from 'react';
 import { ArrowLeft, User as UserIcon, Sliders, Palette, Save, Sun, Moon, Monitor, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { ModelSelector } from '@/components/ui/ModelSelector';
 import { Seo } from '@/components/ui/Seo';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, saveLocalProfile, saveLocalPreferences } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useToast } from '@/context/ToastContext';
-import { supabase } from '@/lib/supabase';
 import { clamp } from '@/lib/utils';
 import { clsx } from '@/lib/clsx';
 import type { Provider, UserPreferences } from '@/lib/database.types';
@@ -56,6 +56,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
           <div className="mx-auto max-w-2xl">
             {tab === 'profile' && (
               <ProfileSection
+                userId={user?.id ?? ''}
                 email={user?.email ?? ''}
                 profile={profile}
                 onSaved={async () => {
@@ -66,6 +67,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
             )}
             {tab === 'preferences' && (
               <PreferencesSection
+                userId={user?.id ?? ''}
                 prefs={preferences}
                 onSaved={async () => {
                   await refreshPreferences();
@@ -133,10 +135,12 @@ function MobileTab({
 // ---------------- Profile ----------------
 
 function ProfileSection({
+  userId,
   email,
   profile,
   onSaved,
 }: {
+  userId: string;
   email: string;
   profile: { full_name: string | null; bio: string | null } | null;
   onSaved: () => Promise<void>;
@@ -146,13 +150,10 @@ function ProfileSection({
   const [saving, setSaving] = useState(false);
 
   async function save() {
+    if (!userId) return;
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ full_name: fullName.trim(), bio: bio.trim() })
-        .eq('id', (await supabase.auth.getUser()).data.user?.id ?? '');
-      if (error) throw error;
+      saveLocalProfile(userId, { full_name: fullName.trim(), bio: bio.trim() });
       await onSaved();
     } catch (e) {
       console.error('profile save failed', e);
@@ -196,9 +197,11 @@ function ProfileSection({
 // ---------------- Preferences ----------------
 
 function PreferencesSection({
+  userId,
   prefs,
   onSaved,
 }: {
+  userId: string;
   prefs: UserPreferences | null;
   onSaved: () => Promise<void>;
 }) {
@@ -206,32 +209,19 @@ function PreferencesSection({
   const [systemPrompt, setSystemPrompt] = useState(prefs?.system_prompt ?? '');
   const [temperature, setTemperature] = useState(prefs?.temperature ?? 0.7);
   const [saving, setSaving] = useState(false);
-  const userId = useRef<string>('');
-
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.auth.getUser();
-      userId.current = data.user?.id ?? '';
-    })();
-  }, []);
 
   async function save() {
+    if (!userId) return;
     setSaving(true);
     try {
       const provider = model.split('/')[0] as Provider;
-      const payload = {
-        user_id: userId.current,
+      saveLocalPreferences(userId, {
         default_provider: provider,
         default_model: model,
         system_prompt: systemPrompt.trim(),
         temperature,
         theme: prefs?.theme ?? 'system',
-      };
-      // upsert
-      const { error } = await supabase
-        .from('user_preferences')
-        .upsert(payload, { onConflict: 'user_id' });
-      if (error) throw error;
+      });
       await onSaved();
     } catch {
       // eslint-disable-next-line no-console
@@ -414,4 +404,4 @@ function Field({
       {hint && <p className="mt-1.5 text-xs text-slate-400">{hint}</p>}
     </div>
   );
-}
+    }
