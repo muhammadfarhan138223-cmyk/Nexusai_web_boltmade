@@ -1,89 +1,173 @@
-import { supabase } from './supabase';
-import type { Chat, ChatInsert, Message, MessageInsert, Provider, Attachment } from './database.types';
+import type {
+  Chat,
+  ChatInsert,
+  Message,
+  MessageInsert,
+  Provider,
+  Attachment,
+} from './database.types';
 import { deriveChatTitle } from './utils';
 
-/**
- * Data-access layer for chats & messages. The supabase client is untyped, so
- * we cast query results to our row types at this boundary. UI components
- * consume fully-typed rows from here.
- */
+const CHAT_KEY = 'nexus-local-chats';
+const MESSAGE_KEY = 'nexus-local-messages';
+
+const USER_ID = 'local-nexus-user';
+
+function now() {
+  return new Date().toISOString();
+}
+
+function id() {
+  return crypto.randomUUID();
+}
+
+function readChats(): Chat[] {
+  try {
+    return JSON.parse(localStorage.getItem(CHAT_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveChats(chats: Chat[]) {
+  localStorage.setItem(CHAT_KEY, JSON.stringify(chats));
+}
+
+function readMessages(): Message[] {
+  try {
+    return JSON.parse(localStorage.getItem(MESSAGE_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveMessages(messages: Message[]) {
+  localStorage.setItem(MESSAGE_KEY, JSON.stringify(messages));
+}
 
 export async function fetchChats(): Promise<Chat[]> {
-  const { data, error } = await supabase
-    .from('chats')
-    .select('*')
-    .order('pinned', { ascending: false })
-    .order('updated_at', { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as Chat[];
+  return readChats().sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    return b.updated_at.localeCompare(a.updated_at);
+  });
 }
 
 export async function fetchMessages(chatId: string): Promise<Message[]> {
-  const { data, error } = await supabase
-    .from('messages')
-    .select('*')
-    .eq('chat_id', chatId)
-    .order('created_at', { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as Message[];
+  return readMessages()
+    .filter((m) => m.chat_id === chatId)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
 }
 
 export async function createChat(
-  init?: Partial<ChatInsert> & { provider?: Provider; model?: string },
+  init?: Partial<ChatInsert> & {
+    provider?: Provider;
+    model?: string;
+  },
 ): Promise<Chat> {
-  const { data, error } = await supabase
-    .from('chats')
-    .insert({
-      title: init?.title ?? 'New chat',
-      provider: init?.provider ?? 'groq',
-      model: init?.model ?? 'groq/llama-3.3-70b-versatile',
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return data as Chat;
+  const timestamp = now();
+
+  const chat: Chat = {
+    id: id(),
+    user_id: USER_ID,
+    title: init?.title ?? 'New chat',
+    provider: init?.provider ?? 'groq',
+    model: init?.model ?? 'groq/llama-3.3-70b-versatile',
+    pinned: init?.pinned ?? false,
+    created_at: timestamp,
+    updated_at: timestamp,
+  };
+
+  saveChats([chat, ...readChats()]);
+  return chat;
 }
 
 export async function renameChat(chatId: string, title: string): Promise<void> {
-  const { error } = await supabase.from('chats').update({ title }).eq('id', chatId);
-  if (error) throw error;
+  saveChats(
+    readChats().map((c) =>
+      c.id === chatId
+        ? { ...c, title, updated_at: now() }
+        : c,
+    ),
+  );
 }
 
-export async function toggleChatPin(chatId: string, pinned: boolean): Promise<void> {
-  const { error } = await supabase.from('chats').update({ pinned }).eq('id', chatId);
-  if (error) throw error;
+export async function toggleChatPin(
+  chatId: string,
+  pinned: boolean,
+): Promise<void> {
+  saveChats(
+    readChats().map((c) =>
+      c.id === chatId
+        ? { ...c, pinned, updated_at: now() }
+        : c,
+    ),
+  );
 }
 
-export async function setChatModel(chatId: string, provider: Provider, model: string): Promise<void> {
-  const { error } = await supabase.from('chats').update({ provider, model }).eq('id', chatId);
-  if (error) throw error;
+export async function setChatModel(
+  chatId: string,
+  provider: Provider,
+  model: string,
+): Promise<void> {
+  saveChats(
+    readChats().map((c) =>
+      c.id === chatId
+        ? { ...c, provider, model, updated_at: now() }
+        : c,
+    ),
+  );
 }
 
 export async function deleteChat(chatId: string): Promise<void> {
-  const { error } = await supabase.from('chats').delete().eq('id', chatId);
-  if (error) throw error;
+  saveChats(readChats().filter((c) => c.id !== chatId));
+  saveMessages(readMessages().filter((m) => m.chat_id !== chatId));
 }
 
 export async function addMessage(msg: MessageInsert): Promise<Message> {
-  const { data, error } = await supabase
-    .from('messages')
-    .insert(msg)
-    .select()
-    .single();
-  if (error) throw error;
-  return data as Message;
+  const message: Message = {
+    id: msg.id ?? id(),
+    chat_id: msg.chat_id,
+    user_id: USER_ID,
+    role: msg.role,
+    content: msg.content,
+    provider: msg.provider ?? null,
+    model: msg.model ?? null,
+    tokens: msg.tokens ?? null,
+    attachments: msg.attachments ?? null,
+    created_at: now(),
+  };
+
+  saveMessages([...readMessages(), message]);
+
+  saveChats(
+    readChats().map((c) =>
+      c.id === message.chat_id
+        ? { ...c, updated_at: message.created_at }
+        : c,
+    ),
+  );
+
+  return message;
 }
 
-export async function updateMessageContent(id: string, content: string, tokens?: number): Promise<void> {
-  const payload: Record<string, unknown> = { content };
-  if (typeof tokens === 'number') payload.tokens = tokens;
-  const { error } = await supabase.from('messages').update(payload).eq('id', id);
-  if (error) throw error;
+export async function updateMessageContent(
+  id: string,
+  content: string,
+  tokens?: number,
+): Promise<void> {
+  saveMessages(
+    readMessages().map((m) =>
+      m.id === id
+        ? {
+            ...m,
+            content,
+            ...(typeof tokens === 'number' ? { tokens } : {}),
+          }
+        : m,
+    ),
+  );
 }
 
-/**
- * Insert the first user message of a chat and auto-title the chat from it.
- */
 export async function seedFirstUserMessage(
   chatId: string,
   content: string,
@@ -95,52 +179,32 @@ export async function seedFirstUserMessage(
     content,
     attachments: attachments ?? null,
   });
-  await renameChat(chatId, deriveChatTitle(content || 'Attached media'));
+
+  await renameChat(
+    chatId,
+    deriveChatTitle(content || 'Attached media'),
+  );
+
   return msg;
 }
 
-/**
- * Substring search across a user's chats + messages for the search bar.
- * Returns chat rows whose title contains the query OR that have a message
- * containing the query.
- */
 export async function searchChats(query: string): Promise<Chat[]> {
-  const q = query.trim();
+  const q = query.trim().toLowerCase();
+
   if (!q) return [];
-  const like = `%${q}%`;
 
-  const { data: byTitle, error: e1 } = await supabase
-    .from('chats')
-    .select('*')
-    .ilike('title', like)
-    .order('updated_at', { ascending: false });
-  if (e1) throw e1;
+  const chats = readChats();
+  const messages = readMessages();
 
-  const { data: byMsg, error: e2 } = await supabase
-    .from('messages')
-    .select('chat_id')
-    .ilike('content', like);
-  if (e2) throw e2;
+  const matchingIds = new Set(
+    messages
+      .filter((m) => m.content.toLowerCase().includes(q))
+      .map((m) => m.chat_id),
+  );
 
-  const ids = Array.from(new Set((byMsg ?? []).map((m: { chat_id: string }) => m.chat_id)));
-  let byId: Chat[] = [];
-  if (ids.length) {
-    const { data, error: e3 } = await supabase
-      .from('chats')
-      .select('*')
-    .in('id', ids)
-      .order('updated_at', { ascending: false });
-    if (e3) throw e3;
-    byId = (data ?? []) as Chat[];
-  }
-
-  const seen = new Set<string>();
-  const merged: Chat[] = [];
-  for (const c of [...((byTitle ?? []) as Chat[]), ...byId]) {
-    if (!seen.has(c.id)) {
-      seen.add(c.id);
-      merged.push(c);
+  return chats.filter(
+    (c) =>
+      c.title.toLowerCase().includes(q) ||
+      matchingIds.has(c.id),
+  );
     }
-  }
-  return merged;
-}
