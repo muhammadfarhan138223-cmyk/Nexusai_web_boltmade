@@ -663,7 +663,7 @@ export function ChatView({
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col bg-white dark:bg-surface-dark">
       {/* Top bar */}
-      <header className="flex h-14 shrink-0 items-center gap-2 border-b border-surface-border px-3 backdrop-blur-md sm:px-4 dark:border-surface-dark-border">
+      <header className="relative z-30 flex h-14 shrink-0 items-center gap-2 border-b border-surface-border px-3 backdrop-blur-md sm:px-4 dark:border-surface-dark-border">
         <button
           onClick={onOpenSidebar}
           className="grid h-9 w-9 place-items-center rounded-xl text-slate-500 hover:bg-slate-100 md:hidden dark:hover:bg-surface-dark-muted"
