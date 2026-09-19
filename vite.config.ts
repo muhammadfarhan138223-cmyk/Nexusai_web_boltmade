@@ -15,16 +15,5 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 1500,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          // Keep the heavy PDF parsing library in its own chunk so the main
-          // app bundle stays small and PDFs load lazily.
-          pdfjs: ['pdfjs-dist'],
-          react: ['react', 'react-dom'],
-          markdown: ['react-markdown', 'remark-gfm'],
-        },
-      },
-    },
   },
 });
