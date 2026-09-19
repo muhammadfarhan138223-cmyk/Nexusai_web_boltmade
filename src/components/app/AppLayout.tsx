@@ -116,7 +116,7 @@ export function AppLayout({ initialChatId }: AppLayoutProps) {
   }, []);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-surface-subtle dark:bg-surface-dark">
+    <div className="flex h-dvh w-full overflow-hidden bg-surface-subtle dark:bg-surface-dark">
       <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
