@@ -32,7 +32,7 @@ export function LandingPage({ onEnter }: { onEnter: (view: 'app' | 'login' | 'si
   const { resolvedTheme, toggle } = useTheme();
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-surface-subtle text-slate-900 dark:bg-surface-dark dark:text-slate-100">
+    <div className="relative min-h-dvh overflow-hidden bg-surface-subtle text-slate-900 dark:bg-surface-dark dark:text-slate-100">
       <Seo />
       {/* Ambient backdrop */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
