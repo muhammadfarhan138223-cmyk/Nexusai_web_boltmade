@@ -7,6 +7,7 @@ import { ModelSelector } from '@/components/ui/ModelSelector';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DailyUsageTracker } from './DailyUsageTracker';
+import { loadUsage, incrementUsage, checkUsage, LIMITS, type UsageState } from '@/lib/usage';
 import { useToast } from '@/context/ToastContext';
 import {
   downloadFile,
@@ -75,7 +76,6 @@ interface ChatViewProps {
 const CHATS_KEY = 'nexus_chats';
 const MESSAGES_KEY = 'nexus_messages';
 const PREFS_KEY = 'nexus_preferences';
-const USAGE_KEY = 'nexus_usage';
 
 function readJSON<T>(key: string, fallback: T): T {
   try {
