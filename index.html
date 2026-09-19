@@ -60,6 +60,37 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- index.html — replace the <body> section (from <div id="root"> to </html>) with this: -->
+  <body>
+    <div id="root"></div>
+    <div
+      id="boot-error"
+      style="display:none; position:fixed; inset:0; z-index:99999; background:#fff; color:#b91c1c; font:13px/1.5 monospace; padding:16px; overflow:auto; white-space:pre-wrap;"
+    ></div>
+    <script>
+      (function () {
+        var box = document.getElementById('boot-error');
+        function show(msg) {
+          box.style.display = 'block';
+          box.textContent += msg + '\n\n';
+        }
+        window.addEventListener('error', function (e) {
+          show('ERROR: ' + (e.message || e) + (e.filename ? '\nat ' + e.filename + ':' + e.lineno : ''));
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+          show('PROMISE REJECTION: ' + (e.reason && e.reason.stack ? e.reason.stack : e.reason));
+        });
+        setTimeout(function () {
+          var root = document.getElementById('root');
+          if (root && root.children.length === 0 && box.style.display === 'none') {
+            show('App did not render within 4s and no JS error was caught (possible network/script-load failure).');
+          }
+        }, 4000);
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
