@@ -30,6 +30,7 @@
     background-color: rgb(var(--bg));
     color: rgb(var(--fg));
     min-height: 100vh;
+    min-height: 100dvh;
   }
 
   h1, h2, h3, h4, h5 {
