@@ -1,7 +1,5 @@
-import { supabase } from './supabase';
+// src/lib/attachments.ts
 import type { Attachment, AttachmentType } from './database.types';
-
-const BUCKET = 'chat-attachments';
 
 const ACCEPTED: Record<AttachmentType, { mimes: string[]; exts: string[] }> = {
   image: {
@@ -18,10 +16,12 @@ const ACCEPTED: Record<AttachmentType, { mimes: string[]; exts: string[] }> = {
   },
 };
 
+// Local mode stores attachments as inline base64 data URLs (in the chat's
+// localStorage record), so keep limits modest to avoid bloating storage.
 const MAX_SIZE: Record<AttachmentType, number> = {
-  image: 20 * 1024 * 1024, // 20MB
-  audio: 50 * 1024 * 1024, // 50MB
-  video: 100 * 1024 * 1024, // 100MB
+  image: 8 * 1024 * 1024, // 8MB
+  audio: 15 * 1024 * 1024, // 15MB
+  video: 15 * 1024 * 1024, // 15MB
 };
 
 export function classifyFile(file: File): AttachmentType | null {
@@ -52,32 +52,24 @@ export function getAcceptString(): string {
   return Array.from(new Set(all)).join(',');
 }
 
+function fileToDataUrlInternal(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error(`Could not read ${file.name}`));
+    reader.readAsDataURL(file);
+  });
+}
+
 /**
- * Upload a file to the chat-attachments bucket under the user's ID prefix.
- * Returns an Attachment object with a signed URL for rendering.
+ * "Upload" a file — in local mode this just reads it into a base64 data URL,
+ * which is stored inline with the message (no backend/storage bucket).
  */
 export async function uploadAttachment(file: File, type: AttachmentType): Promise<Attachment> {
-  const { data: userData } = await supabase.auth.getUser();
-  const userId = userData.user?.id;
-  if (!userId) throw new Error('You must be signed in to upload files.');
-
-  const ext = file.name.split('.').pop() ?? 'bin';
-  const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, file, { contentType: file.type || 'application/octet-stream' });
-  if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
-
-  // Create a signed URL valid for 1 hour.
-  const { data: urlData, error: urlError } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(path, 3600);
-  if (urlError || !urlData?.signedUrl) throw new Error('Could not generate file URL.');
-
+  const url = await fileToDataUrlInternal(file);
   return {
     type,
-    url: urlData.signedUrl,
+    url,
     name: file.name,
     mime: file.type || 'application/octet-stream',
     size: file.size,
@@ -116,19 +108,15 @@ export async function uploadAttachments(
  * Used for multimodal Gemini requests where the file content is sent inline.
  */
 export function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error(`Could not read ${file.name}`));
-    reader.readAsDataURL(file);
-  });
+  return fileToDataUrlInternal(file);
 }
 
 /**
- * Convert an Attachment (with a storage URL) to a data URL by fetching it.
- * For multimodal API calls we need the base64 inline data.
+ * Attachments already store a data URL in local mode, so this is a
+ * pass-through kept for API compatibility with callers.
  */
 export async function attachmentToDataUrl(att: Attachment): Promise<string> {
+  if (att.url.startsWith('data:')) return att.url;
   const res = await fetch(att.url);
   const blob = await res.blob();
   return new Promise((resolve, reject) => {
@@ -137,4 +125,4 @@ export async function attachmentToDataUrl(att: Attachment): Promise<string> {
     reader.onerror = () => reject(new Error(`Could not read ${att.name}`));
     reader.readAsDataURL(blob);
   });
-}
+  }
