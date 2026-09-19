@@ -65,7 +65,7 @@ export function AuthForm({ mode, onSwitch }: AuthFormProps) {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-surface-subtle dark:bg-surface-dark">
+    <div className="relative min-h-dvh overflow-hidden bg-surface-subtle dark:bg-surface-dark">
       <Seo title={isSignup ? 'Create your account' : 'Sign in'} path={isSignup ? '/signup' : '/login'} />
       {/* Ambient gradient backdrop */}
       <div className="pointer-events-none absolute inset-0">
@@ -74,7 +74,7 @@ export function AuthForm({ mode, onSwitch }: AuthFormProps) {
         <div className="absolute inset-0 bg-grid-light dark:bg-grid-dark opacity-60" />
       </div>
 
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center p-4">
+      <div className="relative z-10 flex min-h-dvh flex-col items-center justify-center p-4">
         <div className="w-full max-w-md animate-slide-up">
           <div className="mb-8 flex flex-col items-center text-center">
             <a href="/" className="mb-6">
