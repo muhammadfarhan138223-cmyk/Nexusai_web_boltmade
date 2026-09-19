@@ -66,7 +66,7 @@ function Shell() {
 
   if (loading) {
     return (
-      <div className="grid min-h-screen place-items-center bg-surface-subtle dark:bg-surface-dark">
+      <div className="grid min-h-dvh place-items-center bg-surface-subtle dark:bg-surface-dark">
         <div className="flex flex-col items-center gap-3">
           <LogoMark size={48} className="animate-float" />
           <div className="h-1 w-24 overflow-hidden rounded-full bg-slate-200 dark:bg-surface-dark-border">
