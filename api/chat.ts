@@ -172,12 +172,16 @@ async function handleGemini(
       headers: {
         'Content-Type': 'application/json',
       },
-     body: JSON.stringify({
-        contents,
-        ...(systemText
-          ? { systemInstruction: { parts: [{ text: systemText }] } }
-          : {}),
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature,
+      max_tokens: 2048,
+      stream: true,
+    }),
         generationConfig: {
+          temperature,
+          maxOutputTokens: 4096,
         },
       }),
     },
