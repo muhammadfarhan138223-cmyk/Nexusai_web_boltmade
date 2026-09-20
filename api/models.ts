@@ -31,10 +31,7 @@ const GEMINI_CANDIDATES: Candidate[] = [
   { id: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash', description: "Google's frontier fast model.", badge: 'Fast', contextWindow: '1M' },
   { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite', description: 'Low-latency, cost-efficient Gemini for high-volume tasks.', badge: 'Multimodal', contextWindow: '1M' },
   { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite', description: 'Cost-efficient workhorse Gemini model.', contextWindow: '1M' },
-  { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro', description: "Google's most capable model for complex reasoning.", badge: 'Pro', contextWindow: '1M' },
   { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', description: 'Fast multimodal Gemini model.', contextWindow: '1M' },
-  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Balanced Gemini model with strong reasoning.', contextWindow: '1M' },
-  { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', description: 'Cost-efficient Gemini model.', contextWindow: '1M' },
 ];
 
 const OPENROUTER_CANDIDATES: Candidate[] = [
