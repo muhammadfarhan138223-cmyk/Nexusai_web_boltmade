@@ -495,25 +495,16 @@ export function ChatView({
       };
 
       try {
-        const text = await callGemini({
+        const text = await streamCompletion({
           model,
           history,
           systemPrompt,
           temperature: prefs.temperature,
           signal: controller.signal,
+          onDelta: (full) => setStreamingContent(full),
         });
 
         const finalContent = text || '(no response)';
-
-        // The Gemini generateContent endpoint is non-streaming, so we simulate
-        // a progressive reveal here to keep the existing streaming UI/caret working.
-        const chunkSize = Math.max(4, Math.ceil(finalContent.length / 60));
-        for (let i = 0; i < finalContent.length; i += chunkSize) {
-          if (controller.signal.aborted) break;
-          await new Promise((r) => setTimeout(r, 12));
-          setStreamingContent(finalContent.slice(0, i + chunkSize));
-        }
-
         const persistedContent = controller.signal.aborted ? '_(stopped)_' : finalContent;
         persist({ ...assistantMsg, content: persistedContent });
       } catch (err) {
