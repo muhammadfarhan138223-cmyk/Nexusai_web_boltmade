@@ -1,44 +1,114 @@
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
-interface SeoProps {
+const SITE_URL = "https://nexusai.farhanbalouch.com";
+
+const DEFAULT_TITLE =
+  "Nexus AI — Intelligent AI Assistant | Farhan Balouch";
+
+const DEFAULT_DESCRIPTION =
+  "Nexus AI is an intelligent AI assistant created by Farhan Balouch, designed for AI chat, productivity, documents, AI agents, and everyday work.";
+
+type SeoProps = {
   title?: string;
   description?: string;
   path?: string;
-}
+  image?: string;
+};
 
-const DEFAULT_TITLE = 'Nexus AI — Your Intelligent Assistant for Work & Life';
-const DEFAULT_DESC =
-  'A premium AI assistant platform with streaming chat, multi-model support, document tools, and a growing ecosystem of AI agents.';
-
-/**
- * Lightweight SEO manager: updates document.title + meta tags on route change.
- * Avoids a router dependency; App calls this per-view.
- */
-export function Seo({ title, description, path }: SeoProps) {
+function Seo({
+  title = DEFAULT_TITLE,
+  description = DEFAULT_DESCRIPTION,
+  path = "/",
+  image = "/og-image.svg",
+}: SeoProps) {
   useEffect(() => {
-    const fullTitle = title ? `${title} — Nexus AI` : DEFAULT_TITLE;
-    document.title = fullTitle;
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
-    setMeta('name', 'description', description ?? DEFAULT_DESC);
-    setMeta('property', 'og:title', fullTitle);
-    setMeta('property', 'og:description', description ?? DEFAULT_DESC);
-    setMeta('name', 'twitter:title', fullTitle);
-    setMeta('name', 'twitter:description', description ?? DEFAULT_DESC);
-    if (path) {
-      setMeta('property', 'og:url', `https://nexusai.app${path}`);
-      setMeta('name', 'twitter:url', `https://nexusai.app${path}`);
+    const canonicalUrl =
+      normalizedPath === "/"
+        ? SITE_URL + "/"
+        : `${SITE_URL}${normalizedPath}`;
+
+    const imageUrl = image.startsWith("http")
+      ? image
+      : `${SITE_URL}${image.startsWith("/") ? image : `/${image}`}`;
+
+    // Page title
+    document.title = title;
+
+    // Helper for meta tags
+    const setMeta = (
+      attribute: "name" | "property",
+      key: string,
+      content: string
+    ) => {
+      let element = document.head.querySelector(
+        `meta[${attribute}="${key}"]`
+      ) as HTMLMetaElement | null;
+
+      if (!element) {
+        element = document.createElement("meta");
+        element.setAttribute(attribute, key);
+        document.head.appendChild(element);
+      }
+
+      element.setAttribute("content", content);
+    };
+
+    // Basic SEO
+    setMeta("name", "description", description);
+    setMeta("name", "author", "Farhan Balouch");
+    setMeta(
+      "name",
+      "robots",
+      "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+    );
+
+    // Canonical
+    let canonical = document.head.querySelector(
+      'link[rel="canonical"]'
+    ) as HTMLLinkElement | null;
+
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
     }
-  }, [title, description, path]);
+
+    canonical.setAttribute("href", canonicalUrl);
+
+    // Open Graph
+    setMeta("property", "og:type", "website");
+    setMeta("property", "og:url", canonicalUrl);
+    setMeta("property", "og:title", title);
+    setMeta("property", "og:description", description);
+    setMeta("property", "og:site_name", "Nexus AI");
+    setMeta("property", "og:image", imageUrl);
+    setMeta(
+      "property",
+      "og:image:alt",
+      "Nexus AI — Intelligent AI Assistant"
+    );
+
+    // Twitter / X
+    setMeta("name", "twitter:card", "summary_large_image");
+    setMeta("name", "twitter:url", canonicalUrl);
+    setMeta("name", "twitter:title", title);
+    setMeta("name", "twitter:description", description);
+    setMeta("name", "twitter:image", imageUrl);
+    setMeta(
+      "name",
+      "twitter:image:alt",
+      "Nexus AI — Intelligent AI Assistant"
+    );
+
+    // Restore the default title if this component is removed
+    return () => {
+      document.title = DEFAULT_TITLE;
+    };
+  }, [title, description, path, image]);
 
   return null;
 }
 
-function setMeta(attr: 'name' | 'property', key: string, value: string) {
-  let el = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`);
-  if (!el) {
-    el = document.createElement('meta');
-    el.setAttribute(attr, key);
-    document.head.appendChild(el);
-  }
-  el.setAttribute('content', value);
-}
+export { Seo };
