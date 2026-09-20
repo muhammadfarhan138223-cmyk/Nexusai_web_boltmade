@@ -127,7 +127,7 @@ export const AGENTS: AgentDefinition[] = [
     gradient: 'from-blue-500 to-cyan-500',
     systemPrompt: WEBSITE_BUILDER_PROMPT,
     initialQuestion:
-      'Welcome! I am your Website Builder agent, and I work like a premium software agency. Before I write a single line of code, I need to understand your project deeply. I will ask you one question at a time — there are about 18 questions total.\n\nLet\'s start: **What is the name of your project?**',
+  'Tell me what website you want to build. Include the website/project name and, if relevant, the brand or owner name. I’ll only ask for information that is genuinely essential, then I’ll start building. **What is the name of your project?**',
     planFormatInstruction: WEBSITE_BUILDER_PLAN_FORMAT,
   },
   {
