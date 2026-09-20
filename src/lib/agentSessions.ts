@@ -41,7 +41,7 @@ export async function createAgentSession(
     status: row.status ?? 'planning',
     plan: row.plan ?? null,
     current_step: row.current_step ?? 0,
-    model: row.model ?? 'groq/llama-3.3-70b-versatile',
+    model: row.model ?? 'groq/openai/gpt-oss-120b',
     provider: row.provider ?? 'groq',
     chat_id: row.chat_id ?? null,
     created_at: timestamp,
