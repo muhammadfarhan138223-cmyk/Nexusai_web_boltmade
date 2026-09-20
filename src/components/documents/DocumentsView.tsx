@@ -95,7 +95,7 @@ export function DocumentsView({ onBack }: DocumentsViewProps) {
     }
     setSummarizingId(doc.id);
     try {
-      const model = preferences?.default_model ?? 'groq/llama-3.3-70b-versatile';
+      const model = preferences?.default_model ?? 'groq/openai/gpt-oss-120b';
 
       const chunks = chunkText(text, 12000);
       const body = chunks.length > 1 ? chunks[0] + '\n\n[...document truncated for length...]' : text;
