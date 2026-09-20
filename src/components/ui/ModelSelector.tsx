@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, Zap } from 'lucide-react';
-import { MODELS, getModel, modelsByProvider, PROVIDERS } from '@/lib/models';
+import { MODELS, getModel, modelsByProvider, PROVIDERS, type ModelOption } from '@/lib/models';
+import { getVerifiedModels } from '@/lib/modelCatalog';
 import { clsx } from '@/lib/clsx';
 import type { Provider } from '@/lib/database.types';
 
@@ -16,8 +17,22 @@ const POPUP_HEIGHT = 360;
 export function ModelSelector({ value, onChange, className, compact }: ModelSelectorProps) {
   const [open, setOpen] = useState(false);
   const [dropUp, setDropUp] = useState(false);
+  const [models, setModels] = useState<ModelOption[]>(MODELS);
   const ref = useRef<HTMLDivElement>(null);
-  const current = getModel(value);
+  const current = getModel(value, models);
+
+  // Swap in the live-verified model list (only models that actually exist
+  // on the connected provider accounts right now) once it's ready. Starts
+  // with the static list so the UI renders instantly.
+  useEffect(() => {
+    let cancelled = false;
+    getVerifiedModels().then((list) => {
+      if (!cancelled && list.length > 0) setModels(list);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useLayoutEffect(() => {
     if (!open || !ref.current) return;
