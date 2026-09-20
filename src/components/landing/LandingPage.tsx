@@ -490,6 +490,7 @@ function Footer() {
     </a>
   </p>
 </div>
+        
         </div>
       </div>
     </footer>
