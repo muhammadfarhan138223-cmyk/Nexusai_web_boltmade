@@ -81,25 +81,7 @@ Explain important technical decisions briefly when useful.
 
 Your priority is:
 UNDERSTAND → BUILD → PREVIEW → IMPROVE.`;
-
-const WEBSITE_BUILDER_PLAN_FORMAT = `
-
-When the user asks for a website and the request requires planning, keep the plan short.
-
-Use this format:
-
-### Website Plan
-- **Goal:** one-sentence summary
-- **Pages:** required pages
-- **Features:** requested functionality
-- **Design:** inferred or requested visual direction
-- **Tech:** recommended stack
-
-Then immediately proceed to implementation when enough information is available.
-
-Do NOT require a separate approval step for normal website requests.
-
-Only pause for clarification when a genuinely essential requirement is missing.`;
+;
 
 const WEBSITE_BUILDER_PLAN_FORMAT = `
 
