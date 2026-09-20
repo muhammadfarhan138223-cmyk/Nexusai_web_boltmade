@@ -141,6 +141,12 @@ async function handleGemini(
   messages: any[],
   temperature: number,
 ) {
+  const systemText = messages
+    .filter((m: any) => m.role === 'system')
+    .map((m: any) => (typeof m.content === 'string' ? m.content : ''))
+    .filter(Boolean)
+    .join('\n\n');
+  
   const contents = messages
     .filter(
       (m: any) =>
@@ -166,10 +172,12 @@ async function handleGemini(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
+     body: JSON.stringify({
         contents,
+        ...(systemText
+          ? { systemInstruction: { parts: [{ text: systemText }] } }
+          : {}),
         generationConfig: {
-          temperature,
         },
       }),
     },
