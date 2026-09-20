@@ -1,3 +1,4 @@
+// api/chat.ts — poori file replace karein
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({
@@ -7,7 +8,7 @@ export default async function handler(req: any, res: any) {
 
   const {
     messages = [],
-    model ='groq/openai/gpt-oss-120b',
+    model = 'groq/openai/gpt-oss-120b',
     temperature = 0.7,
   } = req.body || {};
 
@@ -51,9 +52,7 @@ export default async function handler(req: any, res: any) {
     );
   } catch (error: any) {
     return res.status(500).json({
-      error:
-        error?.message ||
-        'AI request failed.',
+      error: error?.message || 'AI request failed.',
     });
   }
 }
@@ -88,6 +87,7 @@ async function handleOpenAICompatible(
       model,
       messages,
       temperature,
+      max_tokens: 2048,
       stream: true,
     }),
   });
@@ -117,20 +117,15 @@ async function handleOpenAICompatible(
   try {
     while (true) {
       const { done, value } = await reader.read();
-
       if (done) break;
-
-      const chunk = decoder.decode(value, {
-        stream: true,
-      });
-
+      const chunk = decoder.decode(value, { stream: true });
       res.write(chunk);
     }
   } finally {
     reader.releaseLock();
   }
 
-  res.write('data: [DONE]\\n\\n');
+  res.write('data: [DONE]\n\n');
   res.end();
 }
 
@@ -146,39 +141,28 @@ async function handleGemini(
     .map((m: any) => (typeof m.content === 'string' ? m.content : ''))
     .filter(Boolean)
     .join('\n\n');
-  
+
   const contents = messages
-    .filter(
-      (m: any) =>
-        m.role === 'user' ||
-        m.role === 'assistant',
-    )
+    .filter((m: any) => m.role === 'user' || m.role === 'assistant')
     .map((m: any) => ({
-      role:
-        m.role === 'assistant'
-          ? 'model'
-          : 'user',
+      role: m.role === 'assistant' ? 'model' : 'user',
       parts: convertGeminiParts(m.content),
     }));
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
       model,
-    )}:streamGenerateContent?alt=sse&key=${encodeURIComponent(
-      apiKey,
-    )}`,
+    )}:streamGenerateContent?alt=sse&key=${encodeURIComponent(apiKey)}`,
     {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature,
-      max_tokens: 2048,
-      stream: true,
-    }),
+      body: JSON.stringify({
+        contents,
+        ...(systemText
+          ? { systemInstruction: { parts: [{ text: systemText }] } }
+          : {}),
         generationConfig: {
           temperature,
           maxOutputTokens: 4096,
@@ -189,7 +173,6 @@ async function handleGemini(
 
   if (!response.ok) {
     const text = await response.text();
-
     return res.status(response.status).json({
       error: text || 'Gemini API error.',
     });
@@ -213,56 +196,37 @@ async function handleGemini(
 
   try {
     while (true) {
-      const { done, value } =
-        await reader.read();
-
+      const { done, value } = await reader.read();
       if (done) break;
 
-      buffer += decoder.decode(value, {
-        stream: true,
-      });
+      buffer += decoder.decode(value, { stream: true });
 
       const events = buffer.split('\n\n');
       buffer = events.pop() || '';
 
       for (const event of events) {
-        const line = event
-          .split('\n')
-          .find((x) =>
-            x.trim().startsWith('data:'),
-          );
-
+        const line = event.split('\n').find((x) => x.trim().startsWith('data:'));
         if (!line) continue;
 
-        const raw = line
-          .trim()
-          .slice(5)
-          .trim();
-
+        const raw = line.trim().slice(5).trim();
         if (!raw) continue;
 
         try {
           const data = JSON.parse(raw);
-
-          const text =
-            data?.candidates?.[0]?.content
-              ?.parts?.[0]?.text;
-
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
           if (text) {
-            res.write(
-              `data: ${JSON.stringify({
-                delta: text,
-              })}\n\n`,
-            );
+            res.write(`data: ${JSON.stringify({ delta: text })}\n\n`);
           }
-        } catch {}
+        } catch {
+          /* ignore malformed SSE line */
+        }
       }
     }
   } finally {
     reader.releaseLock();
   }
 
-  res.write('data: [DONE]\\n\\n');
+  res.write('data: [DONE]\n\n');
   res.end();
 }
 
@@ -278,21 +242,14 @@ function convertGeminiParts(content: any) {
   return content
     .map((part: any) => {
       if (part.type === 'text') {
-        return {
-          text: part.text || '',
-        };
+        return { text: part.text || '' };
       }
 
-      if (
-        part.type === 'inline_data' &&
-        part.inline_data
-      ) {
+      if (part.type === 'inline_data' && part.inline_data) {
         return {
           inline_data: {
-            mime_type:
-              part.inline_data.mime_type,
-            data:
-              part.inline_data.data,
+            mime_type: part.inline_data.mime_type,
+            data: part.inline_data.data,
           },
         };
       }
@@ -300,4 +257,4 @@ function convertGeminiParts(content: any) {
       return null;
     })
     .filter(Boolean);
-}
+        }
