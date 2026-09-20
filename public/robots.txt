@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://nexusai.app/sitemap.xml
+Sitemap: https://nexusai.farhanbalouch.com/sitemap.xml
