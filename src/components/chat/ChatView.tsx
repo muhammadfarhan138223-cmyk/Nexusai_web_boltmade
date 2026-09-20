@@ -151,7 +151,7 @@ interface LocalPreferences {
   system_prompt: string;
 }
 
-const DEFAULT_MODEL = 'gemini-1.5-flash';
+const DEFAULT_MODEL = 'groq/openai/gpt-oss-120b';
 
 const DEFAULT_PREFERENCES: LocalPreferences = {
   default_model: DEFAULT_MODEL,
