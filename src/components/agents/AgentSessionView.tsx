@@ -60,7 +60,7 @@ export function AgentSessionView({
   const [streamingContent, setStreamingContent] = useState('');
   const [loading, setLoading] = useState(!existingSession);
   const [model, setModel] = useState(
-    existingSession?.model ?? preferences?.default_model ?? 'groq/llama-3.3-70b-versatile',
+    existingSession?.model ?? preferences?.default_model ?? 'groq/openai/gpt-oss-120b',
   );
   const [phase, setPhase] = useState<Phase>(
     existingSession?.status === 'building'
