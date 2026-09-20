@@ -71,7 +71,7 @@ export async function createChat(
     user_id: USER_ID,
     title: init?.title ?? 'New chat',
     provider: init?.provider ?? 'groq',
-    model: init?.model ?? 'groq/llama-3.3-70b-versatile',
+    model: init?.model ?? 'groq/openai/gpt-oss-120b',
     pinned: init?.pinned ?? false,
     created_at: timestamp,
     updated_at: timestamp,
