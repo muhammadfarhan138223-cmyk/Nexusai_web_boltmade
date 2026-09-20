@@ -474,7 +474,22 @@ function Footer() {
           </div>
         </div>
         <div className="mt-8 border-t border-surface-border pt-6 text-center text-xs text-slate-400 dark:border-surface-dark-border">
-          © {new Date().getFullYear()} Nexus AI. All rights reserved.
+  <p>
+    © {new Date().getFullYear()} Nexus AI. All rights reserved.
+  </p>
+
+  <p className="mt-2">
+    Created by{' '}
+    <a
+      href="https://farhanbalouch.com/"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-medium text-slate-500 transition-colors hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400"
+    >
+      Farhan Balouch
+    </a>
+  </p>
+</div>
         </div>
       </div>
     </footer>
