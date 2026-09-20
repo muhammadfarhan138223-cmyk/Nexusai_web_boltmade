@@ -113,12 +113,11 @@ export const PROVIDERS: { id: Provider; label: string; description: string }[] =
   { id: 'openrouter', label: 'OpenRouter', description: 'Multi-model access' },
 ];
 
-export function getModel(id: string): ModelOption | undefined {
-  return MODELS.find((m) => m.id === id);
+export function getModel(id: string, list: ModelOption[] = MODELS): ModelOption | undefined {
+  return list.find((m) => m.id === id);
 }
 
-export function modelsByProvider(provider: Provider): ModelOption[] {
-  return MODELS.filter((m) => m.provider === provider);
+export function modelsByProvider(provider: Provider, list: ModelOption[] = MODELS): ModelOption[] {
+  return list.filter((m) => m.provider === provider);
 }
-
 export const DEFAULT_MODEL_ID = 'groq/openai/gpt-oss-120b';
