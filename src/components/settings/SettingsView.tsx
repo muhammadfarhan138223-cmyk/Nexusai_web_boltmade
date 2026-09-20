@@ -205,7 +205,7 @@ function PreferencesSection({
   prefs: UserPreferences | null;
   onSaved: () => Promise<void>;
 }) {
-  const [model, setModel] = useState(prefs?.default_model ?? 'groq/llama-3.3-70b-versatile');
+  const [model, setModel] = useState(prefs?.default_model ?? 'groq/openai/gpt-oss-120b');
   const [systemPrompt, setSystemPrompt] = useState(prefs?.system_prompt ?? '');
   const [temperature, setTemperature] = useState(prefs?.temperature ?? 0.7);
   const [saving, setSaving] = useState(false);
