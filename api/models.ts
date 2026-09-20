@@ -24,8 +24,6 @@ const GROQ_CANDIDATES: Candidate[] = [
   { id: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout', description: 'Multimodal Meta model — text and image input.', badge: 'Vision', contextWindow: '128K' },
   { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B', description: "Meta's versatile flagship model.", contextWindow: '128K' },
   { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant', description: 'Lightweight model for quick replies.', badge: 'Fastest', contextWindow: '128K' },
-  system_prompt:
-      'You are Nexus AI, a helpful, friendly, and knowledgeable assistant. Be clear, concise, and accurate. If you are unsure about something, say so instead of guessing.',
 ];
 
 const GEMINI_CANDIDATES: Candidate[] = [
