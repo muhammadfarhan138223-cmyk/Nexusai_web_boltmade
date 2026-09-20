@@ -34,16 +34,15 @@ const GEMINI_CANDIDATES: Candidate[] = [
   { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', description: 'Fast multimodal Gemini model.', contextWindow: '1M' },
 ];
 
-const OPENROUTER_CANDIDATES: Candidate[] = [
+// Free OpenRouter models are discovered live (see fetchOpenRouterModels below)
+// — every ":free" / $0-priced model shows up automatically, no list to
+// maintain here. This is only the curated *paid* fallback list (shown only
+// if the account actually has a working route to each, via the live check).
+const OPENROUTER_PAID_CANDIDATES: Candidate[] = [
   { id: 'anthropic/claude-sonnet-4.6', label: 'Claude Sonnet 4.6', description: "Anthropic's flagship via OpenRouter — excellent for writing & code.", badge: 'Premium', contextWindow: '1M' },
-  { id: 'anthropic/claude-haiku-4.5', label: 'Claude Haiku 4.5', description: 'Fast, efficient Claude model.', badge: 'Fast', contextWindow: '200K' },
-  { id: 'openai/gpt-4.1-mini', label: 'GPT-4.1 Mini', description: "OpenAI's efficient model via OpenRouter.", contextWindow: '128K' },
-  { id: 'openai/gpt-4.1-nano', label: 'GPT-4.1 Nano', description: "OpenAI's fastest, cheapest model via OpenRouter.", badge: 'Cheap', contextWindow: '128K' },
-  { id: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B', description: "Meta's versatile open model for general-purpose tasks.", badge: 'Open', contextWindow: '128K' },
-  { id: 'deepseek/deepseek-chat', label: 'DeepSeek Chat', description: 'Cost-effective high-quality open model.', contextWindow: '64K' },
-  { id: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B (Free)', description: 'Free-tier routed Llama 3.3 70B — no credits required.', badge: 'Free', contextWindow: '128K' },
+  { id: 'anthropic/claude-haiku-4.5', label: 'Claude Haiku 4.5', description: 'Fast, efficient Claude model.', badge: 'Premium', contextWindow: '200K' },
+  { id: 'openai/gpt-4.1-mini', label: 'GPT-4.1 Mini', description: "OpenAI's efficient model via OpenRouter.", badge: 'Premium', contextWindow: '128K' },
 ];
-
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -101,6 +100,13 @@ async function fetchGeminiModels() {
   }
 }
 
+function formatContextWindow(tokens: number): string {
+  if (!tokens || tokens <= 0) return '—';
+  if (tokens >= 1_000_000) return `${Math.round(tokens / 1_000_000)}M`;
+  if (tokens >= 1_000) return `${Math.round(tokens / 1000)}K`;
+  return String(tokens);
+}
+
 async function fetchOpenRouterModels() {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return [];
@@ -110,12 +116,39 @@ async function fetchOpenRouterModels() {
     });
     if (!r.ok) return [];
     const data = await r.json();
-    const liveIds = new Set((data?.data ?? []).map((m: any) => m.id));
-    return OPENROUTER_CANDIDATES.filter((c) => liveIds.has(c.id)).map((c) => ({
+    const allModels: any[] = data?.data ?? [];
+
+    // Pull in EVERY model OpenRouter currently serves for free — a model is
+    // free if its own price table shows $0 per token, or its id ends in
+    // ":free" (OpenRouter's usual free-route naming convention). No
+    // hardcoded candidate list needed: whatever they add/remove shows up
+    // automatically next time this runs.
+    const freeModels = allModels.filter((m) => {
+      const promptPrice = parseFloat(m?.pricing?.prompt ?? '1');
+      const completionPrice = parseFloat(m?.pricing?.completion ?? '1');
+      const isFree = (promptPrice === 0 && completionPrice === 0) || String(m.id).endsWith(':free');
+      return isFree;
+    });
+
+    const free = freeModels.map((m) => ({
+      id: `openrouter/${m.id}`,
+      label: String(m.name || m.id).replace(/\s*\(free\)\s*$/i, '').trim(),
+      description: m.description
+        ? String(m.description).slice(0, 140)
+        : 'Free model available via OpenRouter.',
+      badge: 'Free',
+      contextWindow: formatContextWindow(m.context_length),
+      provider: 'openrouter',
+    }));
+
+    const liveIds = new Set(allModels.map((m: any) => m.id));
+    const paid = OPENROUTER_PAID_CANDIDATES.filter((c) => liveIds.has(c.id)).map((c) => ({
       ...c,
       id: `openrouter/${c.id}`,
       provider: 'openrouter',
     }));
+
+    return [...free, ...paid];
   } catch {
     return [];
   }
