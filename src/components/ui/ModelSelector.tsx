@@ -81,7 +81,7 @@ export function ModelSelector({ value, onChange, className, compact }: ModelSele
         >
           <div className="max-h-[60vh] overflow-y-auto">
             {PROVIDERS.map((p) => {
-              const list = modelsByProvider(p.id as Provider);
+              const list = modelsByProvider(p.id as Provider, models);
               if (!list.length) return null;
               return (
                 <div key={p.id} className="mb-1">
