@@ -224,73 +224,60 @@ async function localizeAttachment(file: File, type: AttachmentType): Promise<Att
 /* ============================================================================
  * GEMINI API (direct call, replaces the Supabase Edge Function proxy)
  * ==========================================================================*/
+/* ============================================================================
+ * AI COMPLETION — calls our own serverless proxy at /api/chat.
+ * This works for all three providers (Groq, Gemini, OpenRouter) because the
+ * secret keys (GROQ_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY) live on the
+ * server (Vercel env vars), never in the browser. The `model` value is
+ * "provider/model-id" (e.g. "groq/llama-3.3-70b-versatile"), and api/chat.ts
+ * picks the right upstream + key from that prefix.
+ * ==========================================================================*/
 
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-
-interface GeminiPart {
-  text?: string;
-  inlineData?: { mimeType: string; data: string };
-}
-
-interface GeminiContent {
-  role: 'user' | 'model';
-  parts: GeminiPart[];
-}
-
-function toGeminiContents(history: Message[]): GeminiContent[] {
-  return history
-    .map((m): GeminiContent => {
-      const parts: GeminiPart[] = [];
-      if (m.content) parts.push({ text: m.content });
-      if (m.attachments) {
-        for (const att of m.attachments) {
-          if (att.type === 'image') {
-            parts.push({ inlineData: { mimeType: att.mimeType, data: att.base64 } });
-          }
-        }
+function buildApiMessages(model: string, history: Message[], systemPrompt?: string) {
+  const apiMessages: Array<{ role: string; content: unknown }> = [];
+  if (systemPrompt) {
+    apiMessages.push({ role: 'system', content: systemPrompt });
+  }
+  const isGemini = model.startsWith('gemini/');
+  for (const m of history) {
+    const images = (m.attachments ?? []).filter((a) => a.type === 'image');
+    if (isGemini && images.length > 0) {
+      const parts: Array<Record<string, unknown>> = [];
+      if (m.content) parts.push({ type: 'text', text: m.content });
+      for (const att of images) {
+        parts.push({ type: 'inline_data', inline_data: { mime_type: att.mimeType, data: att.base64 } });
       }
-      return { role: m.role === 'assistant' ? 'model' : 'user', parts };
-    })
-    .filter((c) => c.parts.length > 0);
+      apiMessages.push({ role: m.role, content: parts });
+    } else {
+      apiMessages.push({ role: m.role, content: m.content });
+    }
+  }
+  return apiMessages;
 }
 
-async function callGemini({
+async function streamCompletion({
   model,
   history,
   systemPrompt,
   temperature,
   signal,
+  onDelta,
 }: {
   model: string;
   history: Message[];
   systemPrompt?: string;
   temperature: number;
   signal: AbortSignal;
+  onDelta: (fullTextSoFar: string) => void;
 }): Promise<string> {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
-  if (!apiKey) {
-    throw new Error('Missing VITE_GEMINI_API_KEY environment variable.');
-  }
-
-  const modelId = model.replace(/^gemini\//, '') || DEFAULT_MODEL;
-  const url = `${GEMINI_API_BASE}/${modelId}:generateContent?key=${apiKey}`;
-
-  const body: {
-    contents: GeminiContent[];
-    generationConfig: { temperature: number };
-    systemInstruction?: { parts: { text: string }[] };
-  } = {
-    contents: toGeminiContents(history),
-    generationConfig: { temperature },
-  };
-  if (systemPrompt) {
-    body.systemInstruction = { parts: [{ text: systemPrompt }] };
-  }
-
-  const res = await fetch(url, {
+  const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      messages: buildApiMessages(model, history, systemPrompt),
+      model,
+      temperature,
+    }),
     signal,
   });
 
@@ -299,28 +286,49 @@ async function callGemini({
     let message = errText || res.statusText;
     try {
       const parsed = JSON.parse(errText);
-      message = parsed?.error?.message ?? message;
+      message = parsed?.error ?? message;
     } catch {
       /* not JSON, keep raw text */
     }
-    throw new Error(`Gemini API error (${res.status}): ${message}`);
+    throw new Error(message);
   }
 
-  const data = await res.json();
-  const candidate = data?.candidates?.[0];
-  const text: string =
-    candidate?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? '';
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error('Stream unavailable.');
 
-  if (!text) {
-    const blockReason = data?.promptFeedback?.blockReason;
-    if (blockReason) throw new Error(`Response blocked by Gemini safety filters: ${blockReason}`);
-    const finishReason = candidate?.finishReason;
-    if (finishReason && finishReason !== 'STOP') {
-      throw new Error(`Gemini stopped early (${finishReason}).`);
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let full = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const events = buffer.split('\n\n');
+    buffer = events.pop() || '';
+
+    for (const event of events) {
+      const line = event.split('\n').find((x) => x.trim().startsWith('data:'));
+      if (!line) continue;
+      const raw = line.trim().slice(5).trim();
+      if (!raw || raw === '[DONE]') continue;
+      try {
+        const data = JSON.parse(raw);
+        // Gemini path (api/chat.ts) sends { delta: "..." }.
+        // Groq/OpenRouter pass through OpenAI-style { choices: [{ delta: { content } }] }.
+        const delta: string = data?.delta ?? data?.choices?.[0]?.delta?.content ?? '';
+        if (delta) {
+          full += delta;
+          onDelta(full);
+        }
+      } catch {
+        /* ignore malformed SSE line */
+      }
     }
   }
 
-  return text;
+  return full;
 }
 
 /* ============================================================================
