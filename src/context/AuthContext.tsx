@@ -48,7 +48,7 @@ function defaultPreferences(userId: string): UserPreferences {
   return {
     user_id: userId,
     default_provider: 'groq',
-    default_model: 'groq/llama-3.3-70b-versatile',
+    default_model: 'groq/openai/gpt-oss-120b',
     system_prompt: '',
     temperature: 0.7,
     theme: 'system',
