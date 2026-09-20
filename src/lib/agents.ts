@@ -126,8 +126,10 @@ export const AGENTS: AgentDefinition[] = [
     icon: Globe,
     gradient: 'from-blue-500 to-cyan-500',
     systemPrompt: WEBSITE_BUILDER_PROMPT,
+    
     initialQuestion:
-      'Tell me what website you want to build. Include the website/project name and, if relevant, the brand or owner name. I’ll only ask for information that is genuinely essential, then I’ll start building. **What is the name of your project?**',
+       "Tell me what website you want to build. Include the website/project name and, if relevant, the brand or owner name. I’ll only ask for information that is genuinely essential, then I’ll start building."
+    
     planFormatInstruction: WEBSITE_BUILDER_PLAN_FORMAT,
   },
   {
