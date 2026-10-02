@@ -1,0 +1,400 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap');
+
+.nexus-auth {
+  --auth-cyan: #00ffff;
+  --auth-magenta: #ff00ff;
+  --auth-muted: #7a7a7a;
+  min-height: 100dvh;
+  position: relative;
+  overflow: hidden;
+  background: #050609;
+  color: #e8faff;
+  font-family: 'Inter', sans-serif;
+}
+
+.nexus-auth *,
+.nexus-auth *::before,
+.nexus-auth *::after {
+  box-sizing: border-box;
+}
+
+.nexus-auth-particles {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.nexus-auth::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(0, 255, 255, 0.07), transparent 34%),
+    radial-gradient(circle at 20% 70%, rgba(255, 0, 255, 0.05), transparent 30%);
+  pointer-events: none;
+}
+
+.nexus-auth-header {
+  position: relative;
+  z-index: 3;
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+}
+
+.nexus-auth-logo {
+  border: 0;
+  background: transparent;
+  color: var(--auth-cyan);
+  cursor: pointer;
+  text-align: left;
+}
+
+.nexus-auth-logo-title {
+  display: block;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 18px rgba(0,255,255,.35);
+}
+
+.nexus-auth-logo-subtitle {
+  display: block;
+  margin-top: 2px;
+  color: #71808a;
+  font-size: .67rem;
+}
+
+.nexus-auth-nav {
+  display: flex;
+  gap: 8px;
+}
+
+.nexus-auth-nav button {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #b9c5ca;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.nexus-auth-nav button:hover {
+  color: var(--auth-cyan);
+  border-color: rgba(0,255,255,.2);
+  background: rgba(255,255,255,.03);
+}
+
+.nexus-auth-main {
+  position: relative;
+  z-index: 2;
+  min-height: calc(100dvh - 126px);
+  display: grid;
+  place-items: center;
+  padding: 22px 16px 42px;
+}
+
+.nexus-auth-card {
+  width: min(100%, 430px);
+  padding: 32px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 16px;
+  background: rgba(15,17,18,.63);
+  box-shadow:
+    0 20px 70px rgba(0,0,0,.55),
+    inset 0 0 35px rgba(0,255,255,.025);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.nexus-auth-title {
+  margin: 0;
+  color: var(--auth-cyan);
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(2rem, 8vw, 2.65rem);
+  line-height: 1.05;
+  text-shadow: 0 0 18px rgba(0,255,255,.3);
+}
+
+.nexus-auth-tagline {
+  margin: 9px 0 24px;
+  color: #737e83;
+  font-size: .83rem;
+}
+
+.nexus-auth-form {
+  display: grid;
+  gap: 17px;
+}
+
+.nexus-floating {
+  position: relative;
+  padding-top: 8px;
+}
+
+.nexus-floating input {
+  width: 100%;
+  height: 48px;
+  padding: 14px 9px 5px;
+  border: 0;
+  border-bottom: 1px solid #3a4145;
+  outline: none;
+  background: transparent;
+  color: #e9ffff;
+  font: inherit;
+  transition: border-color .25s ease, box-shadow .25s ease;
+}
+
+.nexus-floating input:focus {
+  border-bottom-color: var(--auth-cyan);
+  box-shadow: 0 7px 18px -16px var(--auth-cyan);
+}
+
+.nexus-floating label {
+  position: absolute;
+  left: 9px;
+  top: 18px;
+  color: #6e797e;
+  font-size: .82rem;
+  pointer-events: none;
+  transition: .2s ease;
+}
+
+.nexus-floating input:focus + label,
+.nexus-floating input:not(:placeholder-shown) + label {
+  top: 0;
+  color: var(--auth-cyan);
+  font-size: .68rem;
+}
+
+.nexus-auth-extra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #727d82;
+  font-size: .76rem;
+}
+
+.nexus-auth-extra label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nexus-auth-link {
+  border: 0;
+  background: transparent;
+  color: var(--auth-cyan);
+  cursor: pointer;
+  font: inherit;
+}
+
+.nexus-auth-cta {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--auth-cyan);
+  color: #001010;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(0,255,255,.45);
+  transition: .25s ease;
+}
+
+.nexus-auth-cta:hover:not(:disabled) {
+  background: #22ffff;
+  box-shadow: 0 0 28px rgba(0,255,255,.65);
+  transform: translateY(-1px);
+}
+
+.nexus-auth-cta:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.nexus-auth-error {
+  border: 1px solid rgba(255,80,100,.3);
+  border-radius: 9px;
+  background: rgba(255,40,70,.08);
+  color: #ff9daa;
+  padding: 10px 12px;
+  font-size: .8rem;
+}
+
+.nexus-auth-success {
+  border: 1px solid rgba(0,255,190,.25);
+  border-radius: 9px;
+  background: rgba(0,255,190,.07);
+  color: #82ffdc;
+  padding: 10px 12px;
+  font-size: .8rem;
+}
+
+.nexus-auth-strength {
+  height: 3px;
+  overflow: hidden;
+  margin-top: -7px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.07);
+}
+
+.nexus-auth-strength > span {
+  display: block;
+  height: 100%;
+  transition: width .25s ease;
+}
+
+.nexus-auth-social {
+  margin-top: 23px;
+  text-align: center;
+}
+
+.nexus-auth-social p {
+  margin: 0 0 12px;
+  color: #8a9498;
+  font-size: .8rem;
+}
+
+.nexus-auth-social-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.nexus-auth-social-btn {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 50%;
+  background: rgba(255,255,255,.025);
+  color: var(--auth-cyan);
+  cursor: pointer;
+  transition: .25s ease;
+}
+
+.nexus-auth-social-btn:hover:not(:disabled) {
+  background: var(--auth-cyan);
+  color: #001010;
+  box-shadow: 0 0 18px rgba(0,255,255,.4);
+}
+
+.nexus-auth-social-btn:disabled {
+  opacity: .5;
+  cursor: wait;
+}
+
+.nexus-auth-switch {
+  margin: 21px 0 0;
+  text-align: center;
+  color: #737e83;
+  font-size: .8rem;
+}
+
+.nexus-auth-switch button {
+  border: 0;
+  background: transparent;
+  color: var(--auth-cyan);
+  cursor: pointer;
+  font: inherit;
+}
+
+.nexus-auth-footer {
+  position: relative;
+  z-index: 2;
+  min-height: 50px;
+  padding: 8px 16px 18px;
+  text-align: center;
+  color: #4e595e;
+  font-size: .7rem;
+}
+
+@media (max-width: 640px) {
+  .nexus-auth-header {
+    height: 68px;
+    padding: 0 16px;
+  }
+
+  .nexus-auth-nav {
+    display: none;
+  }
+
+  .nexus-auth-main {
+    min-height: calc(100dvh - 118px);
+    padding: 14px 12px 28px;
+  }
+
+  .nexus-auth-card {
+    padding: 25px 20px;
+  }
+
+  .nexus-auth-title {
+    font-size: 2rem;
+  }
+}
+
+.nexus-floating {
+  position: relative;
+}
+
+.nexus-floating-action {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+}
+
+.nexus-password-toggle {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #7e8b96;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: color .2s ease, background .2s ease;
+}
+
+.nexus-password-toggle:hover,
+.nexus-password-toggle:focus-visible {
+  color: var(--auth-cyan);
+  background: rgba(0, 255, 255, .08);
+  outline: none;
+}
+
+.nexus-provider-letter {
+  font-family: Arial, sans-serif;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.nexus-auth-provider-google .nexus-provider-letter {
+  background: conic-gradient(
+    from -45deg,
+    #4285f4 0 25%,
+    #34a853 25% 45%,
+    #fbbc05 45% 68%,
+    #ea4335 68% 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.nexus-auth-provider-facebook .nexus-provider-letter {
+  color: #1877f2;
+}
